@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/session_store.dart';
+import '../../../services/api_service.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart.dart';
 import '../../widgets/shimmer_card.dart';
@@ -24,16 +25,15 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
   int _tabIndex = 0;
   Timer? _bannerTimer;
   bool _carregando = true;
+  List<Map<String, dynamic>> _produtos = [];
+  bool _erroApi = false;
 
   static const int _totalBanners = 3;
 
   @override
   void initState() {
     super.initState();
-    // Shimmer inicial por 1.2s simulando carregamento
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) setState(() => _carregando = false);
-    });
+    _carregarProdutos();
     // Auto-play do banner a cada 5 segundos
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!mounted) return;
@@ -46,6 +46,18 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
     });
   }
 
+  Future<void> _carregarProdutos() async {
+    setState(() { _carregando = true; _erroApi = false; });
+    try {
+      final lista = await ApiService.getProdutosPublico();
+      if (!mounted) return;
+      setState(() { _produtos = lista; _carregando = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _erroApi = true; _carregando = false; });
+    }
+  }
+
   @override
   void dispose() {
     _bannerTimer?.cancel();
@@ -54,9 +66,7 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
   }
 
   Future<void> _onRefresh() async {
-    setState(() => _carregando = true);
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) setState(() => _carregando = false);
+    await _carregarProdutos();
   }
 
   @override
@@ -211,15 +221,14 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
               ),
               const SizedBox(height: 24),
 
-              // ── Promoções com entrega grátis ────────────────
-              _TituloSecao(titulo: 'Promoções com entrega grátis'),
+              // ── Promoções — produtos reais do banco ─────────
+              _TituloSecao(titulo: 'Produtos disponíveis'),
               const SizedBox(height: 12),
               SizedBox(
                 height: 260,
                 child: _carregando
                     ? ListView(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         scrollDirection: Axis.horizontal,
                         children: const [
                           ShimmerCard(),
@@ -227,39 +236,70 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
                           ShimmerCard(),
                         ],
                       )
-                    : ListView(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 16),
-                        scrollDirection: Axis.horizontal,
-                        children: const [
-                          ProductCard(
-                            nome: 'Mini Salgados',
-                            preco: 'R\$ 12,99',
-                            imgPath: 'assets/salgado.png',
-                            restaurante: 'Salgaderia Mallet',
-                            nota: 4.8,
-                            tempoEntrega: '20-30 min',
-                            entregaGratis: true,
-                          ),
-                          ProductCard(
-                            nome: 'X-Burger',
-                            preco: 'R\$ 9,99',
-                            imgPath: 'assets/hamburguer.png',
-                            restaurante: 'Burger Mania',
-                            nota: 4.6,
-                            tempoEntrega: '25-40 min',
-                          ),
-                          ProductCard(
-                            nome: 'Pizza Grande',
-                            preco: 'R\$ 29,90',
-                            imgPath: 'assets/pizza.png',
-                            restaurante: 'Pizzaria do Zé',
-                            nota: 4.9,
-                            tempoEntrega: '30-45 min',
-                            entregaGratis: true,
-                          ),
-                        ],
-                      ),
+                    : _erroApi
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.wifi_off,
+                                      color: AppColors.textSecondary, size: 32),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Não foi possível carregar os produtos.\nPuxe para atualizar.',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: AppColors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : _produtos.isEmpty
+                            ? Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Center(
+                                  child: Text(
+                                    'Nenhum produto disponível no momento.',
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: AppColors.textSecondary),
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _produtos.length,
+                                itemBuilder: (_, i) {
+                                  final p = _produtos[i];
+                                  final precoRaw = p['preco'];
+                                  final precoNum = precoRaw is num
+                                      ? precoRaw.toDouble()
+                                      : double.tryParse(
+                                              precoRaw?.toString() ?? '') ??
+                                          0.0;
+                                  final precoStr =
+                                      'R\$ ${precoNum.toStringAsFixed(2).replaceAll('.', ',')}';
+                                  return ProductCard(
+                                    nome: p['nome']?.toString() ?? '',
+                                    preco: precoStr,
+                                    imgPath: '',
+                                    idProduto: (p['id_produto'] as num?)
+                                            ?.toInt() ??
+                                        0,
+                                    idEmpresa: (p['id_empresa'] as num?)
+                                            ?.toInt() ??
+                                        0,
+                                    restaurante:
+                                        p['empresa_nome']?.toString(),
+                                  );
+                                },
+                              ),
               ),
               const SizedBox(height: 24),
 

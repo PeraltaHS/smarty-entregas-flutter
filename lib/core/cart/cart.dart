@@ -4,12 +4,16 @@ class CartItem {
   final String nome;
   final String preco;
   final String imgPath;
+  final int idProduto;
+  final int idEmpresa;
   int quantidade;
 
   CartItem({
     required this.nome,
     required this.preco,
     required this.imgPath,
+    required this.idProduto,
+    required this.idEmpresa,
     this.quantidade = 0,
   });
 
@@ -45,12 +49,20 @@ class Cart extends ChangeNotifier {
     }
   }
 
-  void adicionar(String nome, String preco, String imgPath) {
+  void adicionar(String nome, String preco, String imgPath,
+      {int idProduto = 0, int idEmpresa = 0}) {
     final idx = _itens.indexWhere((i) => i.nome == nome);
     if (idx >= 0) {
       _itens[idx].quantidade++;
     } else {
-      _itens.add(CartItem(nome: nome, preco: preco, imgPath: imgPath, quantidade: 1));
+      _itens.add(CartItem(
+        nome: nome,
+        preco: preco,
+        imgPath: imgPath,
+        idProduto: idProduto,
+        idEmpresa: idEmpresa,
+        quantidade: 1,
+      ));
     }
     notifyListeners();
   }

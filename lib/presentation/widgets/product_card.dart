@@ -10,6 +10,8 @@ class ProductCard extends StatelessWidget {
   final String nome;
   final String preco;
   final String imgPath;
+  final int idProduto;
+  final int idEmpresa;
 
   // Informações extras (opcionais) para visual mais rico
   final String? restaurante;
@@ -22,6 +24,8 @@ class ProductCard extends StatelessWidget {
     required this.nome,
     required this.preco,
     required this.imgPath,
+    this.idProduto = 0,
+    this.idEmpresa = 0,
     this.restaurante,
     this.nota,
     this.tempoEntrega,
@@ -245,8 +249,11 @@ class ProductCard extends StatelessWidget {
                                 ),
                                 _BotaoQtd(
                                   icon: Icons.add,
-                                  onTap: () => Cart.instance
-                                      .adicionar(nome, preco, imgPath),
+                                  onTap: () => Cart.instance.adicionar(
+                                    nome, preco, imgPath,
+                                    idProduto: idProduto,
+                                    idEmpresa: idEmpresa,
+                                  ),
                                 ),
                               ],
                             ),
