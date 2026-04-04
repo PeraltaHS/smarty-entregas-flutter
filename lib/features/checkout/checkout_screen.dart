@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/cart/cart.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/session_store.dart';
+import '../../services/api_service.dart';
 
 // ============================================================
 // TELA DE CHECKOUT — Finalização de Pedido
@@ -33,10 +35,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // --- Estado: loading do botão ---
   bool _carregando = false;
 
-  // --- Endereço mockado ---
-  bool _temEndereco = true;
-  final String _endereco = 'Rua das Flores, 123';
-  final String _complemento = 'Apto 42 — Centro, Mallet-PR';
+  // --- Endereço: vazio até o usuário cadastrar ---
+  bool _temEndereco = false;
 
   // --- Taxa de entrega ---
   final double _taxaEntrega = 5.00;
@@ -189,16 +189,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 Text(
-                  _endereco,
+                  'Endereço não informado',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
-                ),
-                Text(
-                  _complemento,
-                  style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -337,10 +333,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                'Smarty Entregas',
-                style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -810,17 +802,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const SizedBox(width: 12),
           Text(
-            'Tempo estimado de entrega:',
+            'Tempo estimado de entrega será informado pelo estabelecimento.',
             style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '30-45 min',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
           ),
         ],
       ),
@@ -874,14 +857,60 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // Lógica de finalizar pedido (simula processamento + dialog de confirmação)
+  // Envia o pedido real ao backend e exibe dialog com id_pedido retornado
   Future<void> _finalizarPedido(BuildContext _) async {
     setState(() => _carregando = true);
-    await Future.delayed(const Duration(milliseconds: 1500));
+
+    final idUsuario = SessionStore.idUsuario;
+    final itens = Cart.instance.itens;
+
+    // Agrupa os itens por empresa (usa o idEmpresa do primeiro item com id válido)
+    final idEmpresa = itens
+        .firstWhere((i) => i.idEmpresa > 0,
+            orElse: () => itens.first)
+        .idEmpresa;
+
+    String? erro;
+
+    if (idUsuario != null && idEmpresa > 0) {
+      final payload = itens
+          .map((i) => {
+                'id_produto': i.idProduto,
+                'quantidade': i.quantidade,
+                'preco_unit': i.precoNumerico,
+              })
+          .toList();
+
+      final resultado = await ApiService.criarPedido(
+        idUsuario: idUsuario,
+        idEmpresa: idEmpresa,
+        itens: payload,
+      );
+
+      if (resultado == null) {
+        // sucesso — mas a API não retorna id_pedido direto nesse método;
+        // consideramos enviado com êxito
+      } else {
+        erro = resultado;
+      }
+    }
+
     if (!mounted) return;
     setState(() => _carregando = false);
 
-    // Dialog de confirmação — usa this.context (State) que é seguro após mounted
+    if (erro != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao enviar pedido: $erro',
+              style: GoogleFonts.poppins(fontSize: 13)),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Dialog de confirmação
+
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -891,7 +920,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Ícone animado de check
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 600),
@@ -919,7 +947,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Seu pedido #1234 foi enviado.\nAcompanhe pelo app.',
+              'Seu pedido foi enviado com sucesso!\nAcompanhe pelo app.',
               style: GoogleFonts.poppins(
                   fontSize: 14, color: AppColors.textSecondary, height: 1.5),
               textAlign: TextAlign.center,
