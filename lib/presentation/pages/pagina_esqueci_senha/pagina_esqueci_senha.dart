@@ -41,9 +41,15 @@ class PaginaEsqueciSenha extends StatelessWidget {
                 Image.asset(
                   'assets/logo.png',
                   height: 220,
-                  errorBuilder: (_, __, ___) => const Text(
-                    'Logo não encontrada',
-                    style: TextStyle(color: Colors.white),
+                  errorBuilder: (_, __, ___) => const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.delivery_dining, size: 70, color: Colors.white),
+                      SizedBox(height: 8),
+                      Text('Smarty Entregas',
+                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 16),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 30),

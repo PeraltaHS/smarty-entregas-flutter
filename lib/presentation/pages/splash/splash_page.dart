@@ -59,12 +59,15 @@ class _SplashPageState extends State<SplashPage>
             child: Image.asset(
               'assets/logo.png',
               height: 250,
-              errorBuilder: (context, error, stackTrace) {
-                return const Text(
-                  'Logo não encontrada',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                );
-              },
+              errorBuilder: (_, __, ___) => const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.delivery_dining, size: 90, color: Colors.white),
+                  SizedBox(height: 12),
+                  Text('Smarty Entregas',
+                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
           ),
         ),

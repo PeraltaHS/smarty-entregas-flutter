@@ -129,12 +129,16 @@ class _PaginaRegistroState extends State<PaginaRegistro> {
                 Image.asset(
                   'assets/logo.png',
                   height: 180,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Text(
-                      'Logo não encontrada',
-                      style: TextStyle(color: Colors.white),
-                    );
-                  },
+                  errorBuilder: (_, __, ___) => const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.delivery_dining, size: 60, color: Colors.white),
+                      SizedBox(height: 8),
+                      Text('Smarty Entregas',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 16),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 30),
 

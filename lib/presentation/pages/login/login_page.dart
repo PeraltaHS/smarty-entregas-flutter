@@ -102,7 +102,23 @@ class _PaginaLoginState extends State<PaginaLogin> {
                 Image.asset(
                   'assets/logo.png',
                   height: 280,
-                  errorBuilder: (_, __, ___) => const SizedBox(height: 80),
+                  errorBuilder: (_, __, ___) => const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.delivery_dining,
+                          size: 80, color: Colors.white),
+                      SizedBox(height: 8),
+                      Text(
+                        'Smarty Entregas',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 30),
 
