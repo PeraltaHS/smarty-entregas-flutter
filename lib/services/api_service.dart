@@ -243,6 +243,64 @@ class ApiService {
   }
 
   // ----------------------------------------------------------------
+  // BUSCA
+  // ----------------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> buscarProdutos(String termo) async {
+    try {
+      final uri = Uri.parse(
+          '$baseUrl/produtos/busca?q=${Uri.encodeComponent(termo)}');
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return List<Map<String, dynamic>>.from(data['empresas'] ?? []);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // PEDIDOS — cliente
+  // ----------------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> getPedidosByCliente(
+      int idUsuario) async {
+    try {
+      final resp = await http.get(
+          Uri.parse('$baseUrl/pedidos/cliente?id_usuario=$idUsuario'));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return List<Map<String, dynamic>>.from(data['pedidos'] ?? []);
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<String?> atualizarStatusPedido(
+      int idPedido, int idStatus) async {
+    try {
+      final resp = await http.patch(
+        Uri.parse('$baseUrl/pedidos/$idPedido/status'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id_status': idStatus}),
+      );
+      if (resp.statusCode == 200) return null;
+      try {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return data['error']?.toString() ?? 'Erro ao atualizar status';
+      } catch (_) {
+        return 'Erro ${resp.statusCode}';
+      }
+    } catch (e) {
+      return 'Servidor indisponível.';
+    }
+  }
+
+  // ----------------------------------------------------------------
   // PEDIDOS — empresa
   // ----------------------------------------------------------------
 

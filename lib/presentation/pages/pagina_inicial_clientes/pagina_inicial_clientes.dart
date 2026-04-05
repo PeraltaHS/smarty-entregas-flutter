@@ -7,9 +7,9 @@ import '../../widgets/product_card.dart';
 import '../../widgets/floating_cart.dart';
 import '../../widgets/shimmer_card.dart';
 import '../subcategorias/subcategorias_page.dart';
-
-final GlobalKey<ScaffoldMessengerState> contextGlobal =
-    GlobalKey<ScaffoldMessengerState>();
+import '../meus_pedidos/meus_pedidos_page.dart';
+import '../perfil/perfil_page.dart';
+import '../busca/busca_page.dart';
 
 class PaginaInicialClientes extends StatefulWidget {
   const PaginaInicialClientes({super.key});
@@ -27,16 +27,22 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
 
   static const int _totalBanners = 3;
 
+  // Páginas do bottom nav (índices 1, 2, 3 — início é inline)
+  static const _paginas = [
+    null,             // 0 = Início (renderizado inline)
+    BuscaPage(),      // 1 = Busca
+    MeusPedidosPage(), // 2 = Pedidos
+    PerfilPage(),     // 3 = Perfil
+  ];
+
   @override
   void initState() {
     super.initState();
-    // Shimmer inicial por 1.2s simulando carregamento
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) setState(() => _carregando = false);
     });
-    // Auto-play do banner a cada 5 segundos
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) return;
+      if (!mounted || _tabIndex != 0) return;
       final next = (_bannerAtual + 1) % _totalBanners;
       _bannerController.animateToPage(
         next,
@@ -61,6 +67,14 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
 
   @override
   Widget build(BuildContext context) {
+    // Se não for tab 0, exibe a página correspondente com AppBar própria
+    if (_tabIndex != 0) {
+      return Scaffold(
+        body: _paginas[_tabIndex]!,
+        bottomNavigationBar: _buildBottomNav(),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(),
@@ -75,32 +89,37 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
               // ── Campo de busca ──────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 4,
-                          offset: Offset(0, 1)),
-                    ],
-                  ),
-                  child: TextField(
-                    style: GoogleFonts.poppins(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar produtos ou lojas...',
-                      hintStyle: GoogleFonts.poppins(
-                          fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: const Icon(Icons.search,
-                          color: AppColors.primary, size: 22),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                child: GestureDetector(
+                  onTap: () => setState(() => _tabIndex = 1),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                            color: Color(0x0A000000),
+                            blurRadius: 4,
+                            offset: Offset(0, 1)),
+                      ],
+                    ),
+                    child: AbsorbPointer(
+                      child: TextField(
+                        style: GoogleFonts.poppins(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar produtos ou lojas...',
+                          hintStyle: GoogleFonts.poppins(
+                              fontSize: 13, color: AppColors.textSecondary),
+                          prefixIcon: const Icon(Icons.search,
+                              color: AppColors.primary, size: 22),
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -129,7 +148,6 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
                               'Promoções Imperdíveis!'),
                         ],
                       ),
-                      // Dots pill animados
                       Positioned(
                         bottom: 10,
                         child: Row(
@@ -158,7 +176,7 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
               ),
               const SizedBox(height: 24),
 
-              // ── Categorias (grid 4×2) ───────────────────────
+              // ── Categorias ──────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: GridView.count(
@@ -187,9 +205,7 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
                         label: 'Farmácias',
                         ativo: false),
                     const _CategoriaItem(
-                        icon: Icons.pets,
-                        label: 'Pet Shop',
-                        ativo: false),
+                        icon: Icons.pets, label: 'Pet Shop', ativo: false),
                     const _CategoriaItem(
                         icon: Icons.local_drink_outlined,
                         label: 'Bebidas',
@@ -203,15 +219,13 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
                         label: 'Express',
                         ativo: false),
                     const _CategoriaItem(
-                        icon: Icons.more_horiz,
-                        label: 'Mais',
-                        ativo: false),
+                        icon: Icons.more_horiz, label: 'Mais', ativo: false),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              // ── Promoções com entrega grátis ────────────────
+              // ── Promoções ───────────────────────────────────
               _TituloSecao(titulo: 'Promoções com entrega grátis'),
               const SizedBox(height: 12),
               SizedBox(
@@ -263,7 +277,7 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
               ),
               const SizedBox(height: 24),
 
-              // ── Cupons e Entregas Grátis ────────────────────
+              // ── Cupons ──────────────────────────────────────
               _TituloSecao(titulo: 'Cupons e Entregas Grátis'),
               const SizedBox(height: 12),
               SizedBox(
@@ -297,10 +311,8 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
               ),
               const SizedBox(height: 16),
 
-              // ── Faixa de boas-vindas ────────────────────────
               _BemVindo(),
-
-              const SizedBox(height: 80), // espaço para o FAB
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -311,7 +323,6 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
     );
   }
 
-  // ─── APP BAR ────────────────────────────────────────────────────
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       elevation: 0,
@@ -321,7 +332,6 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
       titleSpacing: 16,
       title: Row(
         children: [
-          // Logo circular
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Image.asset(
@@ -336,7 +346,6 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
             ),
           ),
           const SizedBox(width: 10),
-          // Localização
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -414,7 +423,6 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
     );
   }
 
-  // ─── BOTTOM NAV ─────────────────────────────────────────────────
   Widget _buildBottomNav() {
     const icons = [
       [Icons.home_outlined, Icons.home],
@@ -450,7 +458,6 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
     );
   }
 
-  // Animação de slide para navegação
   static Route _slide(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (_, __, ___) => page,
@@ -458,8 +465,7 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
         const begin = Offset(1.0, 0.0);
         final tween = Tween(begin: begin, end: Offset.zero)
             .chain(CurveTween(curve: Curves.easeInOut));
-        return SlideTransition(
-            position: anim.drive(tween), child: child);
+        return SlideTransition(position: anim.drive(tween), child: child);
       },
       transitionDuration: const Duration(milliseconds: 300),
     );
@@ -470,12 +476,11 @@ class _PaginaInicialClientesState extends State<PaginaInicialClientes> {
 // WIDGETS AUXILIARES
 // ══════════════════════════════════════════════════════════════════
 
-/// Faixa de boas-vindas com e-mail do usuário logado
 class _BemVindo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final email = SessionStore.email;
-    if (email == null) return const SizedBox.shrink();
+    final nome = SessionStore.nome ?? SessionStore.email;
+    if (nome == null) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -485,7 +490,7 @@ class _BemVindo extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        'Bem-vindo, $email!',
+        'Bem-vindo, $nome!',
         style: GoogleFonts.poppins(
           fontSize: 13,
           fontWeight: FontWeight.w500,
@@ -496,7 +501,6 @@ class _BemVindo extends StatelessWidget {
   }
 }
 
-/// Cabeçalho de seção com título e "Ver mais"
 class _TituloSecao extends StatelessWidget {
   final String titulo;
   const _TituloSecao({required this.titulo});
@@ -513,20 +517,17 @@ class _TituloSecao extends StatelessWidget {
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary)),
-          Text(
-            'Ver mais',
-            style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.primary),
-          ),
+          Text('Ver mais',
+              style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary)),
         ],
       ),
     );
   }
 }
 
-/// Item de categoria (ativo = laranja, inativo = cinza com cadeado)
 class _CategoriaItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -572,9 +573,7 @@ class _CategoriaItem extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   Icon(icon,
-                      color: ativo
-                          ? AppColors.primary
-                          : AppColors.disabled,
+                      color: ativo ? AppColors.primary : AppColors.disabled,
                       size: 26),
                   if (!ativo)
                     Positioned(
@@ -598,8 +597,7 @@ class _CategoriaItem extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight:
-                    ativo ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: ativo ? FontWeight.w600 : FontWeight.w400,
                 color: ativo
                     ? AppColors.textPrimary
                     : AppColors.textSecondary,
@@ -615,7 +613,6 @@ class _CategoriaItem extends StatelessWidget {
   }
 }
 
-/// Card de cupom com gradiente
 class _CupomCard extends StatelessWidget {
   final String texto;
   final IconData icone;
@@ -648,8 +645,7 @@ class _CupomCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
             Icon(icone, color: Colors.white, size: 28),
@@ -666,8 +662,8 @@ class _CupomCard extends StatelessWidget {
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 5),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -688,7 +684,6 @@ class _CupomCard extends StatelessWidget {
   }
 }
 
-/// Banner do carrossel — mostra imagem ou gradiente como fallback
 class _BannerItem extends StatelessWidget {
   final String imgPath;
   final String fallbackText;

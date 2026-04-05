@@ -45,6 +45,7 @@ void main() async {
   app.get('/produtos/empresa',         produto.getProdutosByEmpresa);
   app.get('/produtos/publico',         produto.getProdutosPublico);
   app.get('/produtos/empresas',        produto.getEmpresasComProdutos);
+  app.get('/produtos/busca',           produto.buscarProdutos);
   app.post('/produtos',                produto.createProduto);
   app.delete('/produtos/<id>',         produto.deleteProduto);
   app.patch('/produtos/<id>/ativo',    produto.toggleAtivo);
@@ -52,6 +53,8 @@ void main() async {
   // PEDIDOS
   app.post('/pedidos',                 criarPedido.criarPedido);
   app.get('/pedidos/empresa',          pedido.getPedidosByEmpresa);
+  app.get('/pedidos/cliente',          pedido.getPedidosByCliente);
+  app.patch('/pedidos/<id>/status',    pedido.updateStatus);
 
   final overrideHeaders = {
     'Access-Control-Allow-Origin':  '*',

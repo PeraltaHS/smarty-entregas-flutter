@@ -718,8 +718,10 @@ class _TabPedidosState extends State<_TabPedidos> {
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _pedidos.length,
-                        itemBuilder: (_, i) =>
-                            _CardPedido(pedido: _pedidos[i]),
+                        itemBuilder: (_, i) => _CardPedido(
+                          pedido: _pedidos[i],
+                          onStatusChanged: _carregar,
+                        ),
                       ),
                     ),
         ),
@@ -782,87 +784,209 @@ class _TabPedidosState extends State<_TabPedidos> {
   }
 }
 
-class _CardPedido extends StatelessWidget {
+class _CardPedido extends StatefulWidget {
   final Map<String, dynamic> pedido;
-  const _CardPedido({required this.pedido});
+  final VoidCallback? onStatusChanged;
+  const _CardPedido({required this.pedido, this.onStatusChanged});
+
+  @override
+  State<_CardPedido> createState() => _CardPedidoState();
+}
+
+class _CardPedidoState extends State<_CardPedido> {
+  bool _atualizando = false;
+
+  // Status disponíveis para a empresa avançar
+  // id: 1=Aguardando, 2=Em Preparo, 3=A Caminho, 4=Entregue, 5=Cancelado
+  static const _statusFlow = [
+    {'id': 1, 'nome': 'Aguardando'},
+    {'id': 2, 'nome': 'Em Preparo'},
+    {'id': 3, 'nome': 'A Caminho'},
+    {'id': 4, 'nome': 'Entregue'},
+  ];
+
+  Color _corStatus(String status) {
+    switch (status) {
+      case 'Entregue':   return Colors.green;
+      case 'Cancelado':  return Colors.red;
+      case 'A Caminho':  return Colors.blue;
+      case 'Em Preparo': return Colors.orange;
+      default:           return Colors.grey;
+    }
+  }
+
+  IconData _iconeStatus(String status) {
+    switch (status) {
+      case 'Entregue':   return Icons.check_circle;
+      case 'Cancelado':  return Icons.cancel;
+      case 'A Caminho':  return Icons.delivery_dining;
+      case 'Em Preparo': return Icons.local_fire_department;
+      default:           return Icons.access_time;
+    }
+  }
+
+  Future<void> _avancarStatus(int idPedido, int proximoIdStatus) async {
+    setState(() => _atualizando = true);
+    final erro = await ApiService.atualizarStatusPedido(idPedido, proximoIdStatus);
+    if (!mounted) return;
+    setState(() => _atualizando = false);
+    if (erro != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(erro), backgroundColor: Colors.red),
+      );
+    } else {
+      widget.onStatusChanged?.call();
+    }
+  }
+
+  Future<void> _cancelar(int idPedido) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancelar pedido'),
+        content: const Text('Tem certeza que deseja cancelar este pedido?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Não')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirmar == true) await _avancarStatus(idPedido, 5);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final status = pedido['status']?.toString() ?? '';
-    final valor  = double.tryParse(
-            pedido['valor_total']?.toString() ?? '0') ??
-        0;
+    final pedido  = widget.pedido;
+    final status  = pedido['status']?.toString() ?? '';
+    final idStatus = pedido['id_status'] is int
+        ? pedido['id_status'] as int
+        : int.tryParse(pedido['id_status']?.toString() ?? '') ?? 1;
+    final idPedido = pedido['id_pedido'] is int
+        ? pedido['id_pedido'] as int
+        : int.tryParse(pedido['id_pedido']?.toString() ?? '') ?? 0;
+    final valor = double.tryParse(pedido['valor_total']?.toString() ?? '0') ?? 0;
+    final cor   = _corStatus(status);
 
-    Color statusCor;
-    switch (status) {
-      case 'Entregue':
-        statusCor = Colors.green;
-        break;
-      case 'Cancelado':
-        statusCor = Colors.red;
-        break;
-      default:
-        statusCor = Colors.orange;
-    }
+    // Próximo status no fluxo
+    final idxAtual   = _statusFlow.indexWhere((s) => s['id'] == idStatus);
+    final temProximo = idxAtual >= 0 && idxAtual < _statusFlow.length - 1;
+    final proximo    = temProximo ? _statusFlow[idxAtual + 1] : null;
+    final finalizado = status == 'Entregue' || status == 'Cancelado';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: const [
-          BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 2))
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2))
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('#${pedido['id_pedido']}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusCor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
+          // Header com status
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: cor.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              children: [
+                Icon(_iconeStatus(status), color: cor, size: 18),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(status,
+                      style: TextStyle(color: cor, fontWeight: FontWeight.bold)),
                 ),
-                child: Text(status,
+                Text('#$idPedido',
                     style: TextStyle(
-                        color: statusCor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-              ),
-            ],
+                        color: cor, fontWeight: FontWeight.bold, fontSize: 13)),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(pedido['cliente']?.toString() ?? '',
-              style: TextStyle(color: Colors.grey[700])),
-          const SizedBox(height: 4),
-          if ((pedido['itens']?.toString() ?? '').isNotEmpty)
-            Text(pedido['itens']?.toString() ?? '',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(pedido['criado_em']?.toString().substring(0, 16) ?? '',
-                  style:
-                      TextStyle(fontSize: 12, color: Colors.grey[400])),
-              Text('R\$ ${valor.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                      fontSize: 15)),
-            ],
+          // Conteúdo
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(pedido['cliente']?.toString() ?? '',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15)),
+                const SizedBox(height: 4),
+                if ((pedido['itens']?.toString() ?? '').isNotEmpty)
+                  Text(pedido['itens']?.toString() ?? '',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(pedido['criado_em']?.toString().substring(0, 16) ?? '',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                    Text('R\$ ${valor.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                            fontSize: 15)),
+                  ],
+                ),
+                // Botões de ação (só exibe se não finalizado)
+                if (!finalizado) ...[
+                  const SizedBox(height: 10),
+                  if (_atualizando)
+                    const Center(
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _cor))
+                  else
+                    Row(
+                      children: [
+                        if (proximo != null)
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _avancarStatus(
+                                  idPedido, proximo['id'] as int),
+                              icon: const Icon(Icons.arrow_forward,
+                                  size: 16, color: Colors.white),
+                              label: Text(
+                                proximo['nome'] as String,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 13),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _cor,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                        if (proximo != null) const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: () => _cancelar(idPedido),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 12),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Cancelar',
+                              style: TextStyle(
+                                  color: Colors.red, fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                ],
+              ],
+            ),
           ),
         ],
       ),

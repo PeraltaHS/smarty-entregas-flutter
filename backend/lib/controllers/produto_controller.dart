@@ -302,6 +302,68 @@ class ProdutoController {
     }
   }
 
+  // ----------------------------------------------------------------
+  // GET /produtos/busca?q=termo
+  // ----------------------------------------------------------------
+  Future<Response> buscarProdutos(Request request) async {
+    try {
+      final q = (request.url.queryParameters['q'] ?? '').trim();
+      if (q.isEmpty) {
+        return _json(200, {'empresas': []});
+      }
+
+      final result = await conn.execute(
+        Sql.named('''
+          SELECT e.id_empresa, e.nome AS empresa_nome,
+                 pr.id_produto, pr.nome AS produto_nome,
+                 pr.descricao, pr.preco,
+                 c.nome AS categoria_nome
+          FROM produtos pr
+          JOIN empresas e    ON e.id_empresa  = pr.id_empresa
+          JOIN categorias c  ON c.id_categoria = pr.id_categoria
+          WHERE pr.ativo = true
+            AND (
+              LOWER(pr.nome)        LIKE LOWER(@q)
+              OR LOWER(e.nome)      LIKE LOWER(@q)
+              OR LOWER(c.nome)      LIKE LOWER(@q)
+              OR LOWER(pr.descricao) LIKE LOWER(@q)
+            )
+          ORDER BY e.nome, pr.nome
+        '''),
+        parameters: {'q': '%$q%'},
+      );
+
+      final empresaMap = <int, Map<String, dynamic>>{};
+      for (final r in result) {
+        final idEmpresa   = r[0] as int;
+        final empresaNome = r[1]?.toString() ?? '';
+        final idProduto   = r[2] as int;
+        final produtoNome = r[3]?.toString() ?? '';
+        final descricao   = r[4]?.toString() ?? '';
+        final preco       = r[5];
+        final catNome     = r[6]?.toString() ?? '';
+
+        empresaMap.putIfAbsent(idEmpresa, () => {
+          'id_empresa': idEmpresa,
+          'nome':       empresaNome,
+          'produtos':   <Map<String, dynamic>>[],
+        });
+
+        (empresaMap[idEmpresa]!['produtos'] as List).add({
+          'id_produto':     idProduto,
+          'nome':           produtoNome,
+          'descricao':      descricao,
+          'preco':          preco,
+          'categoria_nome': catNome,
+        });
+      }
+
+      return _json(200, {'empresas': empresaMap.values.toList()});
+    } catch (e) {
+      return _json(500, {'error': e.toString()});
+    }
+  }
+
   Response _json(int status, Map<String, dynamic> body) {
     return Response(
       status,
