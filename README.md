@@ -1,21 +1,43 @@
-<<<<<<< HEAD
-# smarty_entregas
+# Smarty Entregas
 
-A new Flutter project.
+Projeto comercial de delivery — Flutter + Dart backend + PostgreSQL.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## Tecnologias
 
-A few resources to get you started if this is your first Flutter project:
+- **Frontend:** Flutter (Dart)
+- **Backend:** Dart com `shelf` e `shelf_router`, rodando na porta `8080`
+- **Banco de dados:** PostgreSQL (gerenciado via pgAdmin)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
-# smarty-entregas-flutter
-Projeto comercial de delivery — Smarty Entregas
->>>>>>> 12fb045bef408cf4acb10680e82343f749839ccd
+## Como rodar
+
+### Backend
+
+```bash
+cd backend
+dart run bin/backend.dart
+```
+
+Crie o arquivo `backend/.env` com as credenciais do banco (veja `backend/.env.example` se existir).
+
+### Frontend
+
+```bash
+flutter pub get
+flutter run
+```
+
+---
+
+## Banco de Dados
+
+- **Tecnologia:** PostgreSQL
+- **Nome do banco:** `smartyentregas`
+- **Gerenciador recomendado:** pgAdmin
+
+> ⚠️ **Antes de rodar o app pela primeira vez**, restaure o banco a partir de `database/schema.sql`.
+
+Para instruções detalhadas de como exportar e restaurar o banco via pgAdmin, veja [database/README.md](database/README.md).

@@ -1,0 +1,15 @@
+-- ============================================
+-- Smarty Entregas - Schema do banco PostgreSQL
+-- ============================================
+-- Este arquivo contém a estrutura mais atual do banco.
+-- Sempre que alguém modificar o banco, deve exportar
+-- novamente pelo pgAdmin e sobrescrever este arquivo.
+--
+-- Como exportar (pgAdmin):
+--   Botão direito no banco → Backup → Format: Plain
+--   → Only schema (ou Schema and data) → Salvar aqui
+--
+-- Como restaurar (pgAdmin):
+--   Drop o banco antigo → Create database "smartyentregas"
+--   → Botão direito → Restore → apontar este arquivo
+-- ============================================
